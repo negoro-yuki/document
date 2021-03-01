@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>概要.md</title>
+<title>説明資料.md</title>
 <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
 
 <style>
@@ -367,8 +367,9 @@ code {
   </script>
 <h1 id="%E3%83%AC%E3%82%B3%E3%83%BC%E3%83%89%E3%83%AD%E3%82%B0%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">レコードログについて</h1>
 <h2 id="%E3%81%AF%E3%81%98%E3%82%81%E3%81%AB">はじめに</h2>
-<pre><code>WMSの開発において、一般的な構文である[update][delete][insert][merge]は使用しないものとします。
+<pre><code>今後のWMSの開発において、一般的な構文である[update][delete][insert][merge]は使用しないものとします。
 基本は下記のストアドを使用してください。
+USP_GET_Useful_Scriptに追加済みです。
 </code></pre>
 <h2 id="%E3%82%B9%E3%83%88%E3%82%A2%E3%83%89">ストアド</h2>
 <pre><code>USP_CMD_DELETE
@@ -425,6 +426,74 @@ USP_CMD_MERGE
 </tbody>
 </table>
 <hr>
+<h2 id="%E4%B8%80%E8%88%AC%E7%9A%84%E3%81%AA%E6%A7%8B%E6%96%87%E3%81%A8%E3%81%AE%E9%81%95%E3%81%84">一般的な構文との違い</h2>
+<p><strong>一般</strong></p>
+<pre class="hljs"><code><div>--更新対象の指定
+Declare  @Cust_CD varchar(50) = '1'
+		,@Prod_CD varchar(50) = 'P001'
+
+--更新内容
+Declare  @Prod_NM nvarchar(120) = 'テスト商品'
+
+update M_Code_Product
+set Prod_NM = @Prod_NM
+where Cust_CD = @Cust_CD
+and Prod_CD = @Prod_CD
+</div></code></pre>
+<p><strong>FBWMS関数</strong></p>
+<p>改修ポイント:</p>
+<ul>
+<li>@Table_NMに更新対象を入れる</li>
+<li>@Edit_Recordに主キー＋更新項目と内容を入れる</li>
+</ul>
+<pre class="hljs"><code><div>--更新対象の指定
+Declare  @Cust_CD varchar(50) = '1'
+		,@Prod_CD varchar(50) = 'P001'
+
+--更新内容
+Declare  @Prod_NM nvarchar(120) = 'テスト商品'
+		
+</div></code></pre>
+<p>ここから先が関数への渡し方</p>
+<pre class="hljs"><code><div>
+Declare
+   @Stored_NM		varchar(200)
+  ,@Table_NM		varchar(100)
+  ,@Edit_Record	nvarchar(max)
+  ,@Edit_Info		nvarchar(max)
+  ,@Ret			int
+  ,@RetMsg		varchar(500)
+  ,@ErrMsg		varchar(1000)
+
+	begin
+		select @Table_NM = 'M_Code_Product'
+				
+		set @Edit_Record = 
+		(
+			select 
+				@Cust_CD  Cust_CD
+				,@Prod_CD Prod_CD
+				,@Prod_NM　Prod_NM
+			FOR JSON PATH,INCLUDE_NULL_VALUES
+		)
+		if @Edit_Record is not null
+		begin
+			exec [USP_CMD_UPDATE]
+			    @Stored_NM
+				,@Table_NM
+				,@Edit_Record
+				,@Edit_Info	output
+				,@Ret		output
+				,@RetMsg	output
+				,@ErrMsg	output
+			if @Ret &lt;&gt; 0
+			begin
+				goto End_Process
+			end
+		end
+	end			
+</div></code></pre>
+<hr>
 <h2 id="%E3%82%B9%E3%83%88%E3%82%A2%E3%83%89%E3%81%AE%E5%87%A6%E7%90%86%E5%86%85%E5%AE%B9">ストアドの処理内容</h2>
 <ul>
 <li>主キーを元に更新する。</li>
@@ -435,7 +504,7 @@ USP_CMD_MERGE
 </ul>
 <p>※1 主キーがインクリメントである場合、内容のログは残さない。</p>
 <hr>
-<h2 id="%E6%A0%BC%E7%B4%8D%E5%85%88">格納先</h2>
+<h2 id="%E5%87%A6%E7%90%86%E5%BE%8C%E3%81%AE%E6%A0%BC%E7%B4%8D%E5%85%88">処理後の格納先</h2>
 <ul>
 <li>
 <p>L_RetのEdit_InfoにJsonで格納されている。</p>
@@ -497,7 +566,7 @@ USP_CMD_MERGE
 <li>削除されたワークテーブル情報がわかる(現在は処理都度消している)</li>
 <li>インサートで項目を指定しなくてもよい。</li>
 <li>桁数エラーが発生しない(デメリットとしても上げている)</li>
-<li>連結プログラムチョンボが発生しない。</li>
+<li>連結プログラムチョンボが発生しづらい。</li>
 <li>プロファイラーを使用しなくてもざっくりの範囲で処理が遅いのが分かる可能性がある。</li>
 <li>コーディングスキルが少々低くてもセレクションがかければ問題ない。</li>
 </ul>
@@ -560,11 +629,11 @@ USP_CMD_MERGE
 <tbody>
 <tr>
 <td>USP_EDI_Data_Temp_Insert</td>
-<td><details><summary>対象が多いので折りたたみ</summary><div>W_EDI_OtherData/W_EDI_ProductData/W_EDI_ReceiveData/W_EDI_ShipmentData/W_EDI_SupplierData</div></details></td>
+<td>W_EDI_○○○</td>
 </tr>
 <tr>
 <td>USP_EDI_Data_Upsert</td>
-<td>T_EDI_Data</td>
+<td>T_EDI_○○○</td>
 </tr>
 <tr>
 <td>USP_API_EDI_Import</td>
@@ -602,6 +671,10 @@ USP_CMD_MERGE
 <td>USP_PC_F_Progress_WorkHistory_DataUpdate</td>
 <td>T_Progress_WorkHistory</td>
 </tr>
+<tr>
+<td>USP_PC_F_File_BatchFile_DataUpdate</td>
+<td>H_BatchFile</td>
+</tr>
 </tbody>
 </table>
 <h3 id="%E7%90%86%E7%94%B1">理由</h3>
@@ -638,7 +711,7 @@ USP_CMD_MERGE
 <tbody>
 <tr>
 <td>USP_COM_NO_DataSelect</td>
-<td><details><summary>対象が多いので折りたたみ</summary><div>M_Number_EDI_Export/M_Number_EDI_Import/M_Number_FB/M_Number_Invoice/M_Number_MortgageQue/M_Number_Picking/_Number_Relation/M_Number_ReportQue/M_Number_SHIP/M_Number_Summarize/M_Number_Supply</div></details></td>
+<td>M_Number_○○○</td>
 </tr>
 <tr>
 <td>USP_PC_F_File_ResultExport_DataUpdate</td>
@@ -659,7 +732,7 @@ USP_CMD_MERGE
 <tbody>
 <tr>
 <td>USP_EDI_Pattern_Delete</td>
-<td><details><summary>対象が多いので折りたたみ</summary><div> M_EDI_Pattern/M_EDI_FieldM_EDI_Compound_Condition/M_EDI_Coordinate_WMSField/T_EDI_Data/W_EDI_Data/T_EDI_Data/T_EDI_DeliveryData/T_EDI_DeliveryData_Err/T_EDI_OtherData/T_EDI_OtherData_Err/T_EDI_ProductData/T_EDI_ProductData_Err/T_EDI_ReceiveData_BD/T_EDI_ReceiveData_Err/T_EDI_ReceiveData_HD/T_EDI_ShipmentData_BD/T_EDI_ShipmentData_Err/T_EDI_ShipmentData_HD/T_EDI_SupplierData/T_EDI_SupplierData_Err/W_EDI_OtherData/W_EDI_ProductData/W_EDI_ReceiveData/W_EDI_Select_Table/W_EDI_ShipmentData/W_EDI_SupplierData/W_EDI_TMP</div></details></td>
+<td>M_EDI_○○○/W_EDI_○○○/T_EDI_○○○</td>
 </tr>
 </tbody>
 </table>
